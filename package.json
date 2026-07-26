@@ -1,0 +1,38 @@
+{
+  "name": "wifi-guard-bot",
+  "version": "1.0.0",
+  "description": "🛡️ WiFi Guard Bot — WhatsApp Network Intrusion Detection System. Deteksi semua perangkat yang masuk ke WiFi dan kirim alert via WhatsApp.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "dashboard": "node src/dashboard/server.js",
+    "test-audio": "bash setup-aux-audio.sh",
+    "setup-audio": "bash setup-aux-audio.sh"
+  },
+  "keywords": [
+    "whatsapp",
+    "bot",
+    "wifi",
+    "network",
+    "security",
+    "intrusion-detection",
+    "arp-scan",
+    "nmap"
+  ],
+  "author": "Ajiputra",
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "chalk": "^4.1.2",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "figlet": "^1.8.0",
+    "google-tts-api": "^2.0.2",
+    "node-cron": "^3.0.3",
+    "oui": "^13.1.7",
+    "qrcode-terminal": "^0.12.0",
+    "socket.io": "^4.8.1",
+    "whatsapp-web.js": "^1.26.1"
+  }
+}

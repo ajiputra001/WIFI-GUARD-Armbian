@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="WiFi Guard Bot — Real-time Network Monitoring Dashboard. Monitor semua perangkat yang terhubung ke jaringan WiFi Anda.">
+  <title>🛡️ WiFi Guard — Network Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Animated background -->
+  <div class="bg-grid"></div>
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+  <div class="bg-glow bg-glow-3"></div>
+
+  <div class="app">
+    <!-- Header -->
+    <header class="header" id="header">
+      <div class="header-left">
+        <div class="logo">
+          <div class="logo-icon">🛡️</div>
+          <div class="logo-text">
+            <h1>WiFi Guard</h1>
+            <span class="logo-subtitle">Network Intrusion Detection • AJIPUTRA-TECH</span>
+          </div>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="status-badge" id="status-badge">
+          <span class="status-dot"></span>
+          <span class="status-text">Connecting...</span>
+        </div>
+        <div class="system-info" id="system-info">
+          <span class="sys-item" id="sys-interface">—</span>
+          <span class="sys-divider">|</span>
+          <span class="sys-item" id="sys-ip">—</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Stats Cards -->
+    <section class="stats-grid" id="stats-section">
+      <div class="stat-card stat-online" id="stat-online">
+        <div class="stat-icon">📡</div>
+        <div class="stat-info">
+          <div class="stat-value" id="stat-online-value">0</div>
+          <div class="stat-label">Online</div>
+        </div>
+        <div class="stat-glow"></div>
+      </div>
+      <div class="stat-card stat-total" id="stat-total">
+        <div class="stat-icon">📋</div>
+        <div class="stat-info">
+          <div class="stat-value" id="stat-total-value">0</div>
+          <div class="stat-label">Total Devices</div>
+        </div>
+        <div class="stat-glow"></div>
+      </div>
+      <div class="stat-card stat-trusted" id="stat-trusted">
+        <div class="stat-icon">✅</div>
+        <div class="stat-info">
+          <div class="stat-value" id="stat-trusted-value">0</div>
+          <div class="stat-label">Trusted</div>
+        </div>
+        <div class="stat-glow"></div>
+      </div>
+      <div class="stat-card stat-unknown" id="stat-unknown">
+        <div class="stat-icon">🔴</div>
+        <div class="stat-info">
+          <div class="stat-value" id="stat-unknown-value">0</div>
+          <div class="stat-label">Unknown</div>
+        </div>
+        <div class="stat-glow"></div>
+      </div>
+      <div class="stat-card stat-today" id="stat-today">
+        <div class="stat-icon">🆕</div>
+        <div class="stat-info">
+          <div class="stat-value" id="stat-today-value">0</div>
+          <div class="stat-label">New Today</div>
+        </div>
+        <div class="stat-glow"></div>
+      </div>
+      <div class="stat-card stat-connections" id="stat-connections">
+        <div class="stat-icon">🔄</div>
+        <div class="stat-info">
+          <div class="stat-value" id="stat-connections-value">0</div>
+          <div class="stat-label">Connections Today</div>
+        </div>
+        <div class="stat-glow"></div>
+      </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Device Table -->
+      <section class="card device-card" id="device-section">
+        <div class="card-header">
+          <h2>📡 Perangkat Online</h2>
+          <div class="card-actions">
+            <button class="btn btn-ghost" id="btn-show-all" onclick="toggleShowAll()">Show All</button>
+            <button class="btn btn-primary" id="btn-refresh" onclick="refreshDevices()">
+              <span class="btn-icon">🔄</span> Refresh
+            </button>
+          </div>
+        </div>
+        <div class="table-container">
+          <table class="device-table" id="device-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Device</th>
+                <th>IP Address</th>
+                <th>MAC Address</th>
+                <th>Vendor</th>
+                <th>Type</th>
+                <th>Trust</th>
+                <th>Last Seen</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="device-tbody">
+              <tr class="loading-row">
+                <td colspan="9">
+                  <div class="loading-spinner"></div>
+                  <span>Loading devices...</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Activity Log -->
+      <section class="card activity-card" id="activity-section">
+        <div class="card-header">
+          <h2>📜 Activity Log</h2>
+          <span class="badge" id="activity-count">0</span>
+        </div>
+        <div class="activity-list" id="activity-list">
+          <div class="activity-empty">
+            <span>🔍</span>
+            <p>Menunggu aktivitas jaringan...</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <span>🛡️ WiFi Guard Bot v1.0</span>
+      <span class="footer-divider">|</span>
+      <span>⚡ Developed by <strong>AJIPUTRA-TECH</strong></span>
+      <span class="footer-divider">|</span>
+      <span id="footer-time">—</span>
+    </footer>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

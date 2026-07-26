@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Environment & Secrets
+.env
+
+# SQLite Database
+*.db
+*.db-shm
+*.db-wal
+wifi_guard.db*
+
+# WhatsApp Session Auth Cache
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Logs & Temp
+*.log
+/tmp/
