@@ -31,8 +31,16 @@
 
 Mendukung penuh OS **Armbian Ubuntu (20.04, 22.04, 24.04 Focal/Jammy/Noble)** dan **Armbian Debian (11 Bullseye, 12 Bookworm, 13 Trixie)** pada chipset Amlogic, Rockchip, Allwinner, & Raspberry Pi.
 
-Cukup clone repository lalu jalankan script installer otomatis 1-klik:
+### 🚀 Cara 1: Perintah 1-Klik (Super Cepat)
+Cukup copy-paste perintah ini ke terminal STB Armbian Anda:
 
+```bash
+git clone https://github.com/ajiputra001/WIFI-GUARD-Armbian.git && cd WIFI-GUARD-Armbian && sudo bash install.sh
+```
+
+---
+
+### 📌 Cara 2: Langkah Manual
 ```bash
 # 1. Clone repository
 git clone https://github.com/ajiputra001/WIFI-GUARD-Armbian.git
@@ -42,7 +50,7 @@ cd WIFI-GUARD-Armbian
 sudo bash install.sh
 ```
 
-> 💡 Script `install.sh` akan secara otomatis menginstall Node.js 20 LTS, Chromium ARM, tools audio (`mpg123`, `alsa-utils`, `espeak`, `ffmpeg`), serta meng-unmute volume AUX pada soundcard STB Armbian.
+> 💡 Script `install.sh` bekerja secara otomatis menginstall Node.js 20 LTS, Chromium ARM, tools audio (`mpg123`, `alsa-utils`, `espeak`, `ffmpeg`), dependensi NPM, membuat file `.env`, serta meng-unmute volume AUX pada soundcard STB Armbian.
 
 ---
 
