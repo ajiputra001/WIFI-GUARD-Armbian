@@ -141,7 +141,26 @@ npm install
 # Setup .env if missing
 if [ ! -f .env ]; then
     echo -e "${YELLOW}   ⚙️ Creating .env configuration from template...${NC}"
-    cp .env.example .env
+    if [ -f .env.example ]; then
+        cp .env.example .env
+    else
+        cat << 'EOF' > .env
+ALERT_PHONE_NUMBER=
+SCAN_INTERVAL=3
+ALERTS_ENABLED=true
+ALERT_ON_DISCONNECT=true
+DEEP_SCAN_ENABLED=true
+DEEP_SCAN_INTERVAL=5
+DAILY_REPORT_ENABLED=true
+DAILY_REPORT_HOUR=8
+DAILY_REPORT_MINUTE=0
+DASHBOARD_PORT=3000
+DASHBOARD_ENABLED=true
+VOICE_ALERT_ENABLED=true
+VOICE_ALERT_STYLE=stasiun
+VOICE_ALERT_LANG=id
+EOF
+    fi
 fi
 
 echo -e "\n${CYAN}═══════════════════════════════════════════════════════════${NC}"
