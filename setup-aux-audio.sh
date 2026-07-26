@@ -54,12 +54,14 @@ for ctrl in "${CONTROLS[@]}"; do
     amixer sset "$ctrl" 100% unmute 2>/dev/null || true
 done
 
-# Explicit Amlogic S905X P212 soundcard un-mute
+# Explicit Amlogic S905X P212 soundcard un-mute & DAC routing
 amixer sset 'ACODEC' 100% unmute 2>/dev/null || true
 amixer sset 'ACODEC Mute' unmute 2>/dev/null || amixer set 'ACODEC Mute' off 2>/dev/null || true
 amixer sset 'ACODEC Unmu' unmute 2>/dev/null || amixer set 'ACODEC Unmu' on 2>/dev/null || true
 amixer sset 'ACODEC Volu' 100% unmute 2>/dev/null || amixer set 'ACODEC Volu' 100% 2>/dev/null || true
 amixer sset 'AIU ACODEC' 100% unmute 2>/dev/null || amixer set 'AIU ACODEC' 100% 2>/dev/null || true
+amixer set 'ACODEC Left DAC Sel' 'Left' 2>/dev/null || amixer sset 'ACODEC Left DAC Sel' 'Left' 2>/dev/null || true
+amixer set 'ACODEC Right DAC Sel' 'Right' 2>/dev/null || amixer sset 'ACODEC Right DAC Sel' 'Right' 2>/dev/null || true
 
 # Save ALSA settings so volume stays unmuted after reboot
 if command -v alsactl >/dev/null 2>&1 && [ "$EUID" -eq 0 ]; then
@@ -93,13 +95,16 @@ if command -v node >/dev/null 2>&1; then
     " 2>/dev/null || true
 fi
 
-# Play MP3 test file
+# Play MP3 test file across all potential ALSA hardware endpoints (plughw:0,0, hw:0,0, default)
 if [ -f "$TEMP_MP3" ]; then
     if command -v mpg123 >/dev/null 2>&1; then
-        echo -e "▶️  Memutar suara tes dengan ${CYAN}mpg123${NC} (direct ALSA AUX)..."
+        echo -e "▶️  Memutar suara tes dengan ${CYAN}mpg123 (plughw:0,0 AUX 3.5mm)${NC}..."
+        mpg123 -a plughw:0,0 -q "$TEMP_MP3" 2>/dev/null || \
+        mpg123 -a hw:0,0 -q "$TEMP_MP3" 2>/dev/null || \
         mpg123 -q "$TEMP_MP3" 2>/dev/null && AUDIO_PLAYED=1
     elif command -v mpv >/dev/null 2>&1; then
         echo -e "▶️  Memutar suara tes dengan ${CYAN}mpv${NC}..."
+        mpv --audio-device=alsa/plughw:0,0 --no-video --really-quiet "$TEMP_MP3" 2>/dev/null || \
         mpv --no-video --really-quiet "$TEMP_MP3" 2>/dev/null && AUDIO_PLAYED=1
     elif command -v ffplay >/dev/null 2>&1; then
         echo -e "▶️  Memutar suara tes dengan ${CYAN}ffplay${NC}..."

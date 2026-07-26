@@ -381,12 +381,13 @@ class AlertEngine {
 
       // Play via mpg123 / mpv / ffplay / gst-play-1.0 langsung ke ALSA AUX soundcard Armbian STB
       const userEnv = `XDG_RUNTIME_DIR=/run/user/${realUid} PULSE_SERVER=unix:/run/user/${realUid}/pulse/native`;
-      const playCmd = `mpg123 -q ${mp3File} 2>/dev/null || ` +
+      const playCmd = `mpg123 -a plughw:0,0 -q ${mp3File} 2>/dev/null || ` +
+                      `mpg123 -a hw:0,0 -q ${mp3File} 2>/dev/null || ` +
+                      `mpg123 -q ${mp3File} 2>/dev/null || ` +
+                      `mpv --audio-device=alsa/plughw:0,0 --no-video --really-quiet ${mp3File} 2>/dev/null || ` +
                       `mpv --no-video --really-quiet ${mp3File} 2>/dev/null || ` +
                       `ffplay -nodisp -autoexit -loglevel quiet ${mp3File} 2>/dev/null || ` +
-                      `mplayer -really-quiet ${mp3File} 2>/dev/null || ` +
                       `gst-play-1.0 --no-interactive ${mp3File} 2>/dev/null || ` +
-                      `play -q ${mp3File} 2>/dev/null || ` +
                       `sudo -u ${realUser} ${userEnv} gst-play-1.0 --no-interactive ${mp3File} 2>/dev/null`;
 
       exec(`${playCmd} ; rm -f ${mp3File} 2>/dev/null`, (err) => {
