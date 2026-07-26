@@ -95,6 +95,11 @@ if command -v node >/dev/null 2>&1; then
     " 2>/dev/null || true
 fi
 
+if ! command -v mpg123 >/dev/null 2>&1 && [ "$EUID" -eq 0 ]; then
+    echo -e "${YELLOW}⚡ Menginstall mpg123 (pemutar MP3 ALSA AUX)...${NC}"
+    apt-get update -qq && apt-get install -y -qq mpg123 alsa-utils espeak 2>/dev/null || true
+fi
+
 # Play MP3 test file across all potential ALSA hardware endpoints (plughw:0,0, hw:0,0, default)
 if [ -f "$TEMP_MP3" ]; then
     if command -v mpg123 >/dev/null 2>&1; then
@@ -118,19 +123,20 @@ fi
 
 # Offline fallback if MP3 playback failed
 if [ "$AUDIO_PLAYED" -eq 0 ]; then
-    echo -e "▶️  Memutar suara tes fallback offline dengan ${CYAN}espeak + aplay${NC}..."
+    echo -e "▶️  Memutar suara tes fallback offline dengan ${CYAN}espeak + aplay (plughw:0,0)${NC}..."
     if command -v espeak >/dev/null 2>&1 && command -v aplay >/dev/null 2>&1; then
+        espeak -v id+f3 -p 60 -s 140 "$TEST_TEXT" --stdout 2>/dev/null | aplay -D plughw:0,0 -q 2>/dev/null || \
         espeak -v id+f3 -p 60 -s 140 "$TEST_TEXT" --stdout 2>/dev/null | aplay -q 2>/dev/null && AUDIO_PLAYED=1
     fi
 fi
 
 echo -e "\n${CYAN}═══════════════════════════════════════════════════════════${NC}"
 if [ "$AUDIO_PLAYED" -eq 1 ]; then
-    echo -e "${GREEN}${BOLD}  ✅ SETUP AUDIO AUX BERHASIL! Suara telah dikirim ke speaker.${NC}"
-else
-    echo -e "${YELLOW}${BOLD}  ⚠️  Pengaturan selesai. Jika suara tidak terdengar:${NC}"
-    echo -e "     1. Pastikan jack speaker sudah tercolok pas di lubang AUX STB."
-    echo -e "     2. Buka terminal lalu ketik: ${CYAN}alsamixer${NC}"
-    echo -e "     3. Gunakan panah atas untuk membesarkan volume Master / Line Out / Headphone."
+    echo -e "${GREEN}${BOLD}  ✅ SETUP AUDIO AUX SELESAI! Pengiriman audio ke soundcard S905X berhasil.${NC}"
 fi
+echo -e "${YELLOW}${BOLD}  📌 TROUBLESHOOTING FISIK LUBANG AUX STB ARMBIAN (S905X):${NC}"
+echo -e "     1. ${BOLD}Trik Colokan 3.5mm STB:${NC} Lubang AUX pada STB (HG680P/B860H) adalah colokan AV."
+echo -e "        Jika menggunakan kabel jack 3.5mm biasa, coba ${CYAN}TARIK SEDIKIT KELUAR (~1mm)${NC}"
+echo -e "        (jangan terlalu dalam/mentok) agar pin Ground & Audio pas menempel."
+echo -e "     2. Jika memakai kabel RCA AV (Merah-Kuning-Putih), colokkan jack ke ${CYAN}Kuning / Merah${NC}."
 echo -e "${CYAN}═══════════════════════════════════════════════════════════${NC}\n"
