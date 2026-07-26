@@ -20,6 +20,9 @@ echo "  ║  🔊 Armbian STB AUX 3.5mm Speaker Audio Setup & Test    ║"
 echo "  ╚══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
+# Kill any previously running background speaker-test sine wave process
+killall -9 speaker-test 2>/dev/null || true
+
 # Check root if needed for ALSA settings
 if [ "$EUID" -ne 0 ]; then
     echo -e "${YELLOW}⚠️  Menjalankan tanpa sudo. Beberapa pengaturan volume ALSA mungkin memerlukan root.${NC}"
