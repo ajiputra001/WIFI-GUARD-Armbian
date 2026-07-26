@@ -35,8 +35,8 @@ Cukup clone repository lalu jalankan script installer otomatis 1-klik:
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/ajiputra001/WIFI-GUARD.git
-cd WIFI-GUARD
+git clone https://github.com/ajiputra001/WIFI-GUARD-Armbian.git
+cd WIFI-GUARD-Armbian
 
 # 2. Jalankan installer otomatis (Semua dependensi & Chromium ARM terinstall otomatis!)
 sudo bash install.sh
