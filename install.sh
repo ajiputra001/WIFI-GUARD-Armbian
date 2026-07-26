@@ -102,10 +102,19 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
 
 # Unmute ALSA Volume Channels for AUX 3.5mm Speaker Output
 echo -e "\n${GREEN}🔊 Un-muting ALSA AUX Output Volume...${NC}"
-CONTROLS=("Master" "Headphone" "Line Out" "Line" "Audio" "DAC" "PCM" "Speaker" "Output")
+CONTROLS=(
+    "Master" "Headphone" "Line Out" "Line" "Audio" "DAC" "PCM" "Speaker" "Output"
+    "ACODEC" "ACODEC Left" "ACODEC Mute" "ACODEC Play" "ACODEC Ramp" "ACODEC Righ" "ACODEC Unmu" "ACODEC Volu"
+    "AIU ACODEC" "AIU HDMI CT" "AIU SPDIF S"
+)
 for ctrl in "${CONTROLS[@]}"; do
-    amixer set "$ctrl" 100% unmute 2>/dev/null || amixer sset "$ctrl" 100% unmute 2>/dev/null || true
+    amixer set "$ctrl" 100% unmute 2>/dev/null || amixer set "$ctrl" 100%+ 2>/dev/null || amixer set "$ctrl" unmute 2>/dev/null || amixer sset "$ctrl" 100% unmute 2>/dev/null || true
 done
+amixer sset 'ACODEC' 100% unmute 2>/dev/null || true
+amixer sset 'ACODEC Mute' unmute 2>/dev/null || amixer set 'ACODEC Mute' off 2>/dev/null || true
+amixer sset 'ACODEC Unmu' unmute 2>/dev/null || amixer set 'ACODEC Unmu' on 2>/dev/null || true
+amixer sset 'ACODEC Volu' 100% unmute 2>/dev/null || amixer set 'ACODEC Volu' 100% 2>/dev/null || true
+amixer sset 'AIU ACODEC' 100% unmute 2>/dev/null || amixer set 'AIU ACODEC' 100% 2>/dev/null || true
 if command -v alsactl >/dev/null 2>&1; then
     alsactl store 2>/dev/null || true
 fi
