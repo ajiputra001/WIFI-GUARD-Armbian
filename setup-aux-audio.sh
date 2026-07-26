@@ -57,12 +57,12 @@ for ctrl in "${CONTROLS[@]}"; do
     amixer sset "$ctrl" 100% unmute 2>/dev/null || true
 done
 
-# Explicit Amlogic S905X P212 soundcard un-mute & DAC routing
-amixer sset 'ACODEC' 100% unmute 2>/dev/null || true
+# Explicit Amlogic S905X P212 soundcard un-mute & optimal gain (85% to eliminate ground hum)
+amixer sset 'ACODEC' 85% unmute 2>/dev/null || amixer set 'ACODEC' 85% 2>/dev/null || true
 amixer sset 'ACODEC Mute' unmute 2>/dev/null || amixer set 'ACODEC Mute' off 2>/dev/null || true
 amixer sset 'ACODEC Unmu' unmute 2>/dev/null || amixer set 'ACODEC Unmu' on 2>/dev/null || true
-amixer sset 'ACODEC Volu' 100% unmute 2>/dev/null || amixer set 'ACODEC Volu' 100% 2>/dev/null || true
-amixer sset 'AIU ACODEC' 100% unmute 2>/dev/null || amixer set 'AIU ACODEC' 100% 2>/dev/null || true
+amixer sset 'ACODEC Volu' 85% unmute 2>/dev/null || amixer set 'ACODEC Volu' 85% 2>/dev/null || true
+amixer sset 'AIU ACODEC' 85% unmute 2>/dev/null || amixer set 'AIU ACODEC' 85% 2>/dev/null || true
 amixer set 'ACODEC Left DAC Sel' 'Left' 2>/dev/null || amixer sset 'ACODEC Left DAC Sel' 'Left' 2>/dev/null || true
 amixer set 'ACODEC Right DAC Sel' 'Right' 2>/dev/null || amixer sset 'ACODEC Right DAC Sel' 'Right' 2>/dev/null || true
 
