@@ -57,12 +57,12 @@ for ctrl in "${CONTROLS[@]}"; do
     amixer sset "$ctrl" 100% unmute 2>/dev/null || true
 done
 
-# Explicit Amlogic S905X P212 soundcard un-mute & optimal gain (85% to eliminate ground hum)
-amixer sset 'ACODEC' 85% unmute 2>/dev/null || amixer set 'ACODEC' 85% 2>/dev/null || true
+# Explicit Amlogic S905X P212 soundcard un-mute & optimal gain (55% to minimize idle EMI static noise)
+amixer sset 'ACODEC' 55% unmute 2>/dev/null || amixer set 'ACODEC' 55% 2>/dev/null || true
 amixer sset 'ACODEC Mute' unmute 2>/dev/null || amixer set 'ACODEC Mute' off 2>/dev/null || true
 amixer sset 'ACODEC Unmu' unmute 2>/dev/null || amixer set 'ACODEC Unmu' on 2>/dev/null || true
-amixer sset 'ACODEC Volu' 85% unmute 2>/dev/null || amixer set 'ACODEC Volu' 85% 2>/dev/null || true
-amixer sset 'AIU ACODEC' 85% unmute 2>/dev/null || amixer set 'AIU ACODEC' 85% 2>/dev/null || true
+amixer sset 'ACODEC Volu' 55% unmute 2>/dev/null || amixer set 'ACODEC Volu' 55% 2>/dev/null || true
+amixer sset 'AIU ACODEC' 55% unmute 2>/dev/null || amixer set 'AIU ACODEC' 55% 2>/dev/null || true
 amixer set 'ACODEC Left DAC Sel' 'Left' 2>/dev/null || amixer sset 'ACODEC Left DAC Sel' 'Left' 2>/dev/null || true
 amixer set 'ACODEC Right DAC Sel' 'Right' 2>/dev/null || amixer sset 'ACODEC Right DAC Sel' 'Right' 2>/dev/null || true
 
@@ -73,7 +73,7 @@ if command -v alsactl >/dev/null 2>&1 && [ "$EUID" -eq 0 ]; then
 fi
 
 echo -e "\n${GREEN}[3/3] 🔊 Menguji Keluaran Suara ke Lubang AUX STB...${NC}"
-echo -e "${YELLOW}📢 Colokkan speaker eksternal ke lubang AUX (3.5mm jack) pada STB Armbian sekarang!${NC}\n"
+echo -e "${YELLOW}📢 Colokkan speaker eksternal ke lubang AUX (3.5mm jack) atau USB Soundcard STB sekarang!${NC}\n"
 
 TEST_TEXT="Halo! Audio aux pada STB Armbian berhasil dikonfigurasi dan siap digunakan!"
 TEMP_MP3="/tmp/wifi_aux_test.mp3"
@@ -103,23 +103,19 @@ if ! command -v mpg123 >/dev/null 2>&1 && [ "$EUID" -eq 0 ]; then
     apt-get update -qq && apt-get install -y -qq mpg123 alsa-utils espeak 2>/dev/null || true
 fi
 
-# Play MP3 test file across all potential ALSA hardware endpoints (plughw:0,0, hw:0,0, default)
+# Play MP3 test file across all potential ALSA hardware endpoints (plughw:0,0, plughw:1,0, hw:0,0, default)
 if [ -f "$TEMP_MP3" ]; then
     if command -v mpg123 >/dev/null 2>&1; then
-        echo -e "▶️  Memutar suara tes dengan ${CYAN}mpg123 (plughw:0,0 AUX 3.5mm)${NC}..."
+        echo -e "▶️  Memutar suara tes dengan ${CYAN}mpg123 (plughw:0,0 AUX & plughw:1,0 USB Audio)${NC}..."
+        mpg123 -a plughw:1,0 -q "$TEMP_MP3" 2>/dev/null || \
         mpg123 -a plughw:0,0 -q "$TEMP_MP3" 2>/dev/null || \
         mpg123 -a hw:0,0 -q "$TEMP_MP3" 2>/dev/null || \
         mpg123 -q "$TEMP_MP3" 2>/dev/null && AUDIO_PLAYED=1
     elif command -v mpv >/dev/null 2>&1; then
         echo -e "▶️  Memutar suara tes dengan ${CYAN}mpv${NC}..."
+        mpv --audio-device=alsa/plughw:1,0 --no-video --really-quiet "$TEMP_MP3" 2>/dev/null || \
         mpv --audio-device=alsa/plughw:0,0 --no-video --really-quiet "$TEMP_MP3" 2>/dev/null || \
         mpv --no-video --really-quiet "$TEMP_MP3" 2>/dev/null && AUDIO_PLAYED=1
-    elif command -v ffplay >/dev/null 2>&1; then
-        echo -e "▶️  Memutar suara tes dengan ${CYAN}ffplay${NC}..."
-        ffplay -nodisp -autoexit -loglevel quiet "$TEMP_MP3" 2>/dev/null && AUDIO_PLAYED=1
-    elif command -v gst-play-1.0 >/dev/null 2>&1; then
-        echo -e "▶️  Memutar suara tes dengan ${CYAN}gst-play-1.0${NC}..."
-        gst-play-1.0 --no-interactive "$TEMP_MP3" 2>/dev/null && AUDIO_PLAYED=1
     fi
     rm -f "$TEMP_MP3" 2>/dev/null || true
 fi
