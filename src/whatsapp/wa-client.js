@@ -24,7 +24,29 @@ class WhatsAppClient {
   // Find Chrome/Chromium executable
   // ─────────────────────────────────────────
   _findChromePath() {
-    // 1. Check puppeteer cache for all users (handles sudo case)
+    // 0. Environment variable override
+    if (process.env.PUPPETEER_EXECUTABLE_PATH && fs.existsSync(process.env.PUPPETEER_EXECUTABLE_PATH)) {
+      console.log(`🔍 Found Chrome from ENV: ${process.env.PUPPETEER_EXECUTABLE_PATH}`);
+      return process.env.PUPPETEER_EXECUTABLE_PATH;
+    }
+
+    // 1. System-installed browsers (Prioritize native Chromium binaries for Armbian STB / Linux ARM)
+    const systemPaths = [
+      '/usr/bin/chromium-browser',
+      '/usr/bin/chromium',
+      '/usr/bin/google-chrome-stable',
+      '/usr/bin/google-chrome',
+      '/snap/bin/chromium',
+    ];
+
+    for (const p of systemPaths) {
+      if (fs.existsSync(p)) {
+        console.log(`🔍 Found system Chrome: ${p}`);
+        return p;
+      }
+    }
+
+    // 2. Check puppeteer cache for all users (handles sudo case, fallback)
     const possibleUsers = [
       os.homedir(),
       path.join('/home', process.env.SUDO_USER || ''),
@@ -42,27 +64,11 @@ class WhatsAppClient {
           for (const ver of versions) {
             const chromePath = path.join(cacheDir, ver, 'chrome-linux64', 'chrome');
             if (fs.existsSync(chromePath)) {
-              console.log(`🔍 Found Chrome: ${chromePath}`);
+              console.log(`🔍 Found cached Chrome: ${chromePath}`);
               return chromePath;
             }
           }
         } catch {}
-      }
-    }
-
-    // 2. System-installed browsers (Prioritize Chromium ARM binaries for Armbian STB)
-    const systemPaths = [
-      '/usr/bin/chromium-browser',
-      '/usr/bin/chromium',
-      '/usr/bin/google-chrome-stable',
-      '/usr/bin/google-chrome',
-      '/snap/bin/chromium',
-    ];
-
-    for (const p of systemPaths) {
-      if (fs.existsSync(p)) {
-        console.log(`🔍 Found system Chrome: ${p}`);
-        return p;
       }
     }
 
@@ -86,8 +92,8 @@ class WhatsAppClient {
           '--no-first-run',
           '--disable-gpu',
           '--no-zygote',
-          '--single-process',
           '--disable-software-rasterizer',
+          '--disable-extensions',
         ]
       };
 

@@ -154,7 +154,7 @@ if [ ! -f .env ]; then
         cp .env.example .env
     else
         cat << 'EOF' > .env
-ALERT_PHONE_NUMBER=
+ALERT_PHONE_NUMBER=120363406334144686@g.us
 SCAN_INTERVAL=3
 ALERTS_ENABLED=true
 ALERT_ON_DISCONNECT=true
