@@ -145,7 +145,11 @@ echo -e "\n${GREEN}[5/5] 📚 Installing Project Dependencies (NPM)...${NC}"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
-npm install
+# Clean up any previous incompatible Puppeteer x86 Chrome cache on ARM
+rm -rf /root/.cache/puppeteer 2>/dev/null || true
+rm -rf ~/.cache/puppeteer 2>/dev/null || true
+
+PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm install
 
 # Setup .env if missing
 if [ ! -f .env ]; then
