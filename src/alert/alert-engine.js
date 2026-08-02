@@ -379,11 +379,14 @@ class AlertEngine {
       const buffer = Buffer.from(base64, 'base64');
       fs.writeFileSync(mp3File, buffer);
 
-      // Play via mpg123 / mpv / ffplay / gst-play-1.0 langsung ke ALSA AUX soundcard Armbian STB
+      // Play via mpg123 / mpv / ffplay / gst-play-1.0 langsung ke USB Soundcard (plughw:1,0) & ALSA AUX (plughw:0,0) Armbian STB
       const userEnv = `XDG_RUNTIME_DIR=/run/user/${realUid} PULSE_SERVER=unix:/run/user/${realUid}/pulse/native`;
-      const playCmd = `mpg123 -a plughw:0,0 -q ${mp3File} 2>/dev/null || ` +
+      const playCmd = `mpg123 -a plughw:1,0 -q ${mp3File} 2>/dev/null || ` +
+                      `mpg123 -a plughw:0,0 -q ${mp3File} 2>/dev/null || ` +
+                      `mpg123 -a hw:1,0 -q ${mp3File} 2>/dev/null || ` +
                       `mpg123 -a hw:0,0 -q ${mp3File} 2>/dev/null || ` +
                       `mpg123 -q ${mp3File} 2>/dev/null || ` +
+                      `mpv --audio-device=alsa/plughw:1,0 --no-video --really-quiet ${mp3File} 2>/dev/null || ` +
                       `mpv --audio-device=alsa/plughw:0,0 --no-video --really-quiet ${mp3File} 2>/dev/null || ` +
                       `mpv --no-video --really-quiet ${mp3File} 2>/dev/null || ` +
                       `ffplay -nodisp -autoexit -loglevel quiet ${mp3File} 2>/dev/null || ` +
@@ -410,7 +413,9 @@ class AlertEngine {
     const speed = 130; // Tempo santai layaknya manusia
 
     const userEnv = `XDG_RUNTIME_DIR=/run/user/${realUid} PULSE_SERVER=unix:/run/user/${realUid}/pulse/native`;
-    const cmd = `espeak -v ${voiceVariant} -p ${pitch} -s ${speed} "${safeText}" --stdout 2>/dev/null | aplay -q 2>/dev/null || ` +
+    const cmd = `espeak -v ${voiceVariant} -p ${pitch} -s ${speed} "${safeText}" --stdout 2>/dev/null | aplay -D plughw:1,0 -q 2>/dev/null || ` +
+                `espeak -v ${voiceVariant} -p ${pitch} -s ${speed} "${safeText}" --stdout 2>/dev/null | aplay -D plughw:0,0 -q 2>/dev/null || ` +
+                `espeak -v ${voiceVariant} -p ${pitch} -s ${speed} "${safeText}" --stdout 2>/dev/null | aplay -q 2>/dev/null || ` +
                 `espeak -v ${voiceVariant} -p ${pitch} -s ${speed} "${safeText}" --stdout 2>/dev/null | sudo -u ${realUser} ${userEnv} aplay -q 2>/dev/null`;
 
     exec(cmd, () => {});
