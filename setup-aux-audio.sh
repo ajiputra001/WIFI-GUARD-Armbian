@@ -50,21 +50,26 @@ CONTROLS=(
 )
 
 for ctrl in "${CONTROLS[@]}"; do
-    amixer set "$ctrl" 100% unmute 2>/dev/null || \
-    amixer set "$ctrl" 100%+ 2>/dev/null || \
-    amixer set "$ctrl" unmute 2>/dev/null || \
-    amixer set "$ctrl" on 2>/dev/null || \
-    amixer sset "$ctrl" 100% unmute 2>/dev/null || true
+    for c in 0 1 2; do
+        amixer -c $c set "$ctrl" 100% unmute 2>/dev/null || \
+        amixer -c $c set "$ctrl" 100%+ 2>/dev/null || \
+        amixer -c $c set "$ctrl" unmute 2>/dev/null || \
+        amixer -c $c set "$ctrl" on 2>/dev/null || \
+        amixer -c $c sset "$ctrl" 100% unmute 2>/dev/null || true
+    done
+    amixer set "$ctrl" 100% unmute 2>/dev/null || true
 done
 
-# Explicit Amlogic S905X P212 soundcard un-mute & optimal gain (55% to minimize idle EMI static noise)
-amixer sset 'ACODEC' 55% unmute 2>/dev/null || amixer set 'ACODEC' 55% 2>/dev/null || true
-amixer sset 'ACODEC Mute' unmute 2>/dev/null || amixer set 'ACODEC Mute' off 2>/dev/null || true
-amixer sset 'ACODEC Unmu' unmute 2>/dev/null || amixer set 'ACODEC Unmu' on 2>/dev/null || true
-amixer sset 'ACODEC Volu' 55% unmute 2>/dev/null || amixer set 'ACODEC Volu' 55% 2>/dev/null || true
-amixer sset 'AIU ACODEC' 55% unmute 2>/dev/null || amixer set 'AIU ACODEC' 55% 2>/dev/null || true
-amixer set 'ACODEC Left DAC Sel' 'Left' 2>/dev/null || amixer sset 'ACODEC Left DAC Sel' 'Left' 2>/dev/null || true
-amixer set 'ACODEC Right DAC Sel' 'Right' 2>/dev/null || amixer sset 'ACODEC Right DAC Sel' 'Right' 2>/dev/null || true
+# Explicit Amlogic S905X P212 & USB soundcard 100% MAX Volume
+for c in 0 1 2; do
+    amixer -c $c sset 'ACODEC' 100% unmute 2>/dev/null || amixer -c $c set 'ACODEC' 100% 2>/dev/null || true
+    amixer -c $c sset 'ACODEC Mute' unmute 2>/dev/null || amixer -c $c set 'ACODEC Mute' off 2>/dev/null || true
+    amixer -c $c sset 'ACODEC Unmu' unmute 2>/dev/null || amixer -c $c set 'ACODEC Unmu' on 2>/dev/null || true
+    amixer -c $c sset 'ACODEC Volu' 100% unmute 2>/dev/null || amixer -c $c set 'ACODEC Volu' 100% 2>/dev/null || true
+    amixer -c $c sset 'AIU ACODEC' 100% unmute 2>/dev/null || amixer -c $c set 'AIU ACODEC' 100% 2>/dev/null || true
+    amixer -c $c set 'ACODEC Left DAC Sel' 'Left' 2>/dev/null || true
+    amixer -c $c set 'ACODEC Right DAC Sel' 'Right' 2>/dev/null || true
+done
 
 # Save ALSA settings so volume stays unmuted after reboot
 if command -v alsactl >/dev/null 2>&1 && [ "$EUID" -eq 0 ]; then

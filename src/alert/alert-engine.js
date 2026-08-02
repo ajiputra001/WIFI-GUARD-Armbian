@@ -349,10 +349,35 @@ class AlertEngine {
   }
 
   // ─────────────────────────────────────────
+  // Helper: Maximize ALSA soundcard volume (100% Full)
+  // ─────────────────────────────────────────
+  _maximizeAlsaVolume() {
+    try {
+      const cmd = `for c in 0 1 2; do ` +
+                  `amixer -c $c sset 'Master' 100% unmute 2>/dev/null || true; ` +
+                  `amixer -c $c sset 'Speaker' 100% unmute 2>/dev/null || true; ` +
+                  `amixer -c $c sset 'Headphone' 100% unmute 2>/dev/null || true; ` +
+                  `amixer -c $c sset 'PCM' 100% unmute 2>/dev/null || true; ` +
+                  `amixer -c $c sset 'Line Out' 100% unmute 2>/dev/null || true; ` +
+                  `amixer -c $c sset 'ACODEC' 100% unmute 2>/dev/null || true; ` +
+                  `amixer -c $c sset 'ACODEC Volu' 100% unmute 2>/dev/null || true; ` +
+                  `amixer -c $c sset 'AIU ACODEC' 100% unmute 2>/dev/null || true; ` +
+                  `done; ` +
+                  `amixer sset 'Master' 100% unmute 2>/dev/null || true; ` +
+                  `amixer sset 'Speaker' 100% unmute 2>/dev/null || true; ` +
+                  `amixer sset 'PCM' 100% unmute 2>/dev/null || true;`;
+      exec(cmd, () => {});
+    } catch {}
+  }
+
+  // ─────────────────────────────────────────
   // Text-To-Speech Voice Alert (Suara Manusia AI Jernih)
   // ─────────────────────────────────────────
   async speakVoiceAlert(text) {
     if (!this.voiceAlertEnabled) return;
+
+    // Pastikan volume ALSA selalu 100% MAX full
+    this._maximizeAlsaVolume();
 
     const realUser = process.env.SUDO_USER || 'ajiputra';
     const realUid = process.env.SUDO_UID || '1000';

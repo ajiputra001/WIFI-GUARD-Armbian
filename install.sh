@@ -108,13 +108,18 @@ CONTROLS=(
     "AIU ACODEC" "AIU HDMI CT" "AIU SPDIF S"
 )
 for ctrl in "${CONTROLS[@]}"; do
+    for c in 0 1 2; do
+        amixer -c $c set "$ctrl" 100% unmute 2>/dev/null || amixer -c $c set "$ctrl" 100%+ 2>/dev/null || amixer -c $c set "$ctrl" unmute 2>/dev/null || amixer -c $c sset "$ctrl" 100% unmute 2>/dev/null || true
+    done
     amixer set "$ctrl" 100% unmute 2>/dev/null || amixer set "$ctrl" 100%+ 2>/dev/null || amixer set "$ctrl" unmute 2>/dev/null || amixer sset "$ctrl" 100% unmute 2>/dev/null || true
 done
-amixer sset 'ACODEC' 100% unmute 2>/dev/null || true
-amixer sset 'ACODEC Mute' unmute 2>/dev/null || amixer set 'ACODEC Mute' off 2>/dev/null || true
-amixer sset 'ACODEC Unmu' unmute 2>/dev/null || amixer set 'ACODEC Unmu' on 2>/dev/null || true
-amixer sset 'ACODEC Volu' 100% unmute 2>/dev/null || amixer set 'ACODEC Volu' 100% 2>/dev/null || true
-amixer sset 'AIU ACODEC' 100% unmute 2>/dev/null || amixer set 'AIU ACODEC' 100% 2>/dev/null || true
+for c in 0 1 2; do
+    amixer -c $c sset 'ACODEC' 100% unmute 2>/dev/null || true
+    amixer -c $c sset 'ACODEC Mute' unmute 2>/dev/null || amixer -c $c set 'ACODEC Mute' off 2>/dev/null || true
+    amixer -c $c sset 'ACODEC Unmu' unmute 2>/dev/null || amixer -c $c set 'ACODEC Unmu' on 2>/dev/null || true
+    amixer -c $c sset 'ACODEC Volu' 100% unmute 2>/dev/null || amixer -c $c set 'ACODEC Volu' 100% 2>/dev/null || true
+    amixer -c $c sset 'AIU ACODEC' 100% unmute 2>/dev/null || amixer -c $c set 'AIU ACODEC' 100% 2>/dev/null || true
+done
 if command -v alsactl >/dev/null 2>&1; then
     alsactl store 2>/dev/null || true
 fi
