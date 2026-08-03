@@ -9,12 +9,13 @@ const fs = require('fs');
 const googleTTS = require('google-tts-api');
 
 class AlertEngine {
-  constructor({ db, scanner, identifier, formatter, waClient, config = {} }) {
+  constructor({ db, scanner, identifier, formatter, waClient, signalTracker, config = {} }) {
     this.db = db;
     this.scanner = scanner;
     this.identifier = identifier;
     this.formatter = formatter;
     this.waClient = waClient;
+    this.signalTracker = signalTracker || null;
     
     // Config
     this.scanInterval = (config.scanInterval || 3) * 1000; // ms (3s default)
@@ -453,7 +454,18 @@ class AlertEngine {
     if (!this.alertsEnabled) return;
     
     const totalOnline = this.db.getOnlineDevices().length;
-    const text = this.formatter.formatNewDeviceAlert(device, totalOnline);
+
+    // Gather signal/location data for this device
+    let signalInfo = null;
+    if (this.signalTracker) {
+      try {
+        signalInfo = await this.signalTracker.getDeviceSignal(device);
+      } catch (error) {
+        console.log('⚠️  Signal tracking error for new device:', error.message);
+      }
+    }
+
+    const text = this.formatter.formatNewDeviceAlert(device, totalOnline, signalInfo);
     
     console.log(`🚨 ALERT: New device ${device.mac} (${device.vendor})`);
     
@@ -461,10 +473,21 @@ class AlertEngine {
       const devName = this._getReadableDeviceName(device);
       let voiceMsg = `Perhatian. Terdeteksi perangkat baru memasuki jaringan Wi-Fi, yaitu ${devName}. Harap periksa keamanan jaringan Anda.`;
       
+      // Add location info to voice alert
+      if (signalInfo && signalInfo.zone) {
+        voiceMsg += ` Estimasi lokasi: ${signalInfo.zone.label}.`;
+      }
+
       if (this.voiceAlertStyle === 'anime') {
         voiceMsg = `Moshi moshi! Peringatan Onii-chan! Perangkat baru terdeteksi di Wi-Fi! Yaitu ${devName}!`;
+        if (signalInfo && signalInfo.zone) {
+          voiceMsg += ` Lokasi estimasi: ${signalInfo.zone.label}!`;
+        }
       } else if (this.voiceAlertStyle === 'human') {
         voiceMsg = `Peringatan. Perangkat baru terdeteksi di jaringan Wi-Fi, yaitu ${devName}.`;
+        if (signalInfo && signalInfo.zone) {
+          voiceMsg += ` Estimasi berada di zona ${signalInfo.zone.label}.`;
+        }
       }
 
       await this.speakVoiceAlert(voiceMsg);

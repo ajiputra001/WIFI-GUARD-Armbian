@@ -1,16 +1,19 @@
 // ═══════════════════════════════════════════════════════════════
-// 🤖 Command Handler — WiFi Guard Bot
+// 🤖 Command Handler — WiFi Guard Bot v2.0
 // Handle semua perintah yang dikirim via WhatsApp
+// Prefix: / (garis miring)
 // ═══════════════════════════════════════════════════════════════
 
 class CommandHandler {
-  constructor({ db, scanner, identifier, formatter, alertEngine, waClient }) {
+  constructor({ db, scanner, identifier, formatter, alertEngine, waClient, firewall, signalTracker }) {
     this.db = db;
     this.scanner = scanner;
     this.identifier = identifier;
     this.formatter = formatter;
     this.alertEngine = alertEngine;
     this.waClient = waClient;
+    this.firewall = firewall || null;
+    this.signalTracker = signalTracker || null;
     this.alertPhoneNumber = waClient.alertPhoneNumber;
   }
 
@@ -51,7 +54,7 @@ class CommandHandler {
     if (!this.isAuthorized(msg)) return;
 
     const body = msg.body.trim();
-    if (!body.startsWith('!')) return;
+    if (!body.startsWith('/')) return;
 
     const parts = body.split(/\s+/);
     const command = parts[0].toLowerCase();
@@ -61,40 +64,51 @@ class CommandHandler {
 
     try {
       switch (command) {
-        case '!help':
+        case '/help':
           return this._handleHelp(msg);
-        case '!status':
+        case '/status':
           return this._handleStatus(msg);
-        case '!devices':
-        case '!device':
-        case '!list':
+        case '/devices':
+        case '/device':
+        case '/list':
           return this._handleDevices(msg);
-        case '!scan':
+        case '/scan':
           return this._handleScan(msg);
-        case '!trust':
+        case '/trust':
           return this._handleTrust(msg, args);
-        case '!untrust':
+        case '/untrust':
           return this._handleUntrust(msg, args);
-        case '!block':
+        case '/block':
           return this._handleBlock(msg, args);
-        case '!name':
+        case '/name':
           return this._handleName(msg, args);
-        case '!history':
+        case '/history':
           return this._handleHistory(msg);
-        case '!stats':
-        case '!stat':
+        case '/stats':
+        case '/stat':
           return this._handleStats(msg);
-        case '!whitelist':
-        case '!trusted':
+        case '/whitelist':
+        case '/trusted':
           return this._handleWhitelist(msg);
-        case '!unknown':
+        case '/unknown':
           return this._handleUnknown(msg);
-        case '!alert':
+        case '/alert':
           return this._handleAlertToggle(msg, args);
-        case '!ping':
+        case '/ping':
           return this._handlePing(msg);
+        // ═══ NEW v2.0 Commands ═══
+        case '/blockip':
+          return this._handleBlockIP(msg, args);
+        case '/unblockip':
+          return this._handleUnblockIP(msg, args);
+        case '/blocked':
+          return this._handleBlockedList(msg);
+        case '/locate':
+          return this._handleLocate(msg, args);
+        case '/radar':
+          return this._handleRadar(msg);
         default:
-          return this.waClient.reply(msg, '❓ Perintah tidak dikenal. Ketik *!help* untuk daftar perintah.');
+          return this.waClient.reply(msg, '❓ Perintah tidak dikenal. Ketik */help* untuk daftar perintah.');
       }
     } catch (error) {
       console.error('❌ Command error:', error);
@@ -103,7 +117,7 @@ class CommandHandler {
   }
 
   // ═══════════════════════════════════════════
-  // Command Handlers
+  // Original Command Handlers (updated to / prefix)
   // ═══════════════════════════════════════════
 
   async _handleHelp(msg) {
@@ -112,9 +126,25 @@ class CommandHandler {
   }
 
   async _handleStatus(msg) {
+    await this.waClient.reply(msg, '⏳ _Mengumpulkan data status..._');
+
     const systemInfo = this.scanner.getSystemInfo();
     const stats = this.db.getStats();
-    const text = this.formatter.formatStatus(systemInfo, stats);
+    const onlineDevices = this.db.getOnlineDevices();
+    const blockedIPs = this.firewall ? this.firewall.getBlockedList() : [];
+
+    // Gather signal data for all online devices
+    let signalData = new Map();
+    if (this.signalTracker) {
+      try {
+        signalData = await this.signalTracker.getAllDeviceSignals(onlineDevices);
+      } catch (error) {
+        console.log('⚠️  Signal tracking error:', error.message);
+      }
+    }
+
+    const scanCount = this.alertEngine ? this.alertEngine._scanCount : 0;
+    const text = this.formatter.formatStatus(systemInfo, stats, onlineDevices, signalData, blockedIPs, scanCount);
     return this.waClient.reply(msg, text);
   }
 
@@ -139,7 +169,7 @@ class CommandHandler {
 
   async _handleTrust(msg, args) {
     if (args.length === 0) {
-      return this.waClient.reply(msg, '❌ Format: `!trust <MAC>`\nContoh: `!trust AA:BB:CC:DD:EE:FF`');
+      return this.waClient.reply(msg, '❌ Format: `/trust <MAC>`\nContoh: `/trust AA:BB:CC:DD:EE:FF`');
     }
 
     const mac = args[0].toUpperCase();
@@ -156,7 +186,7 @@ class CommandHandler {
 
   async _handleUntrust(msg, args) {
     if (args.length === 0) {
-      return this.waClient.reply(msg, '❌ Format: `!untrust <MAC>`');
+      return this.waClient.reply(msg, '❌ Format: `/untrust <MAC>`');
     }
 
     const mac = args[0].toUpperCase();
@@ -173,7 +203,7 @@ class CommandHandler {
 
   async _handleBlock(msg, args) {
     if (args.length === 0) {
-      return this.waClient.reply(msg, '❌ Format: `!block <MAC>`\nContoh: `!block AA:BB:CC:DD:EE:FF`');
+      return this.waClient.reply(msg, '❌ Format: `/block <MAC>`\nContoh: `/block AA:BB:CC:DD:EE:FF`');
     }
 
     const mac = args[0].toUpperCase();
@@ -190,7 +220,7 @@ class CommandHandler {
 
   async _handleName(msg, args) {
     if (args.length < 2) {
-      return this.waClient.reply(msg, '❌ Format: `!name <MAC> <nama>`\nContoh: `!name AA:BB:CC:DD:EE:FF HP Aji`');
+      return this.waClient.reply(msg, '❌ Format: `/name <MAC> <nama>`\nContoh: `/name AA:BB:CC:DD:EE:FF HP Aji`');
     }
 
     const mac = args[0].toUpperCase();
@@ -222,7 +252,7 @@ class CommandHandler {
     const devices = this.db.getDevicesByTrust('trusted');
     
     if (devices.length === 0) {
-      return this.waClient.reply(msg, '✅ *WHITELIST*\n\n_Belum ada perangkat trusted._\nGunakan `!trust <MAC>` untuk menambah.');
+      return this.waClient.reply(msg, '✅ *WHITELIST*\n\n_Belum ada perangkat trusted._\nGunakan `/trust <MAC>` untuk menambah.');
     }
 
     const lines = [
@@ -264,8 +294,9 @@ class CommandHandler {
       lines.push('');
     });
 
-    lines.push('💡 _Gunakan !trust <MAC> untuk trust_');
-    lines.push('💡 _Gunakan !block <MAC> untuk block_');
+    lines.push('💡 _Gunakan /trust <MAC> untuk trust_');
+    lines.push('💡 _Gunakan /block <MAC> untuk block_');
+    lines.push('💡 _Gunakan /blockip <IP> untuk blokir akses internet_');
 
     return this.waClient.reply(msg, lines.join('\n'));
   }
@@ -273,7 +304,7 @@ class CommandHandler {
   async _handleAlertToggle(msg, args) {
     if (args.length === 0) {
       const status = this.alertEngine.alertsEnabled ? 'ON ✅' : 'OFF ❌';
-      return this.waClient.reply(msg, `🔔 Alert saat ini: *${status}*\n\nGunakan \`!alert on\` atau \`!alert off\``);
+      return this.waClient.reply(msg, `🔔 Alert saat ini: *${status}*\n\nGunakan \`/alert on\` atau \`/alert off\``);
     }
 
     const toggle = args[0].toLowerCase();
@@ -285,7 +316,7 @@ class CommandHandler {
       this.alertEngine.alertsEnabled = false;
       return this.waClient.reply(msg, '🔕 Alert *DINONAKTIFKAN* ❌');
     } else {
-      return this.waClient.reply(msg, '❌ Gunakan `!alert on` atau `!alert off`');
+      return this.waClient.reply(msg, '❌ Gunakan `/alert on` atau `/alert off`');
     }
   }
 
@@ -294,6 +325,170 @@ class CommandHandler {
     const hours = Math.floor(uptime / 3600);
     const mins = Math.floor((uptime % 3600) / 60);
     return this.waClient.reply(msg, `🏓 *Pong!*\n⏱️ Bot uptime: ${hours}h ${mins}m\n✅ Bot berjalan normal`);
+  }
+
+  // ═══════════════════════════════════════════
+  // NEW v2.0 Commands
+  // ═══════════════════════════════════════════
+
+  // ─────────────────────────────────────────
+  // /blockip <IP> — Block IP via ARP Spoofing
+  // ─────────────────────────────────────────
+  async _handleBlockIP(msg, args) {
+    if (!this.firewall) {
+      return this.waClient.reply(msg, '❌ Firewall module tidak tersedia.');
+    }
+
+    if (args.length === 0) {
+      return this.waClient.reply(msg, [
+        '❌ *Format:* `/blockip <IP>`',
+        '',
+        '📌 *Contoh:*',
+        '`/blockip 192.168.1.150`',
+        '',
+        '💡 _Gunakan /devices untuk melihat IP perangkat_',
+        '⚠️ _Block menggunakan ARP Spoofing — efektif walau STB bukan router_',
+      ].join('\n'));
+    }
+
+    const ip = args[0];
+    await this.waClient.reply(msg, `🔒 _Memblokir ${ip}..._`);
+
+    // Find device by IP in database
+    const device = this.db.getDeviceByIP(ip);
+    const mac = device ? device.mac : null;
+
+    const result = await this.firewall.blockIP(ip, mac);
+
+    if (result.success) {
+      // Update database
+      if (device) {
+        this.db.setTrustLevel(device.mac, 'blocked');
+        this.db.setIPBlocked(device.mac, true);
+      }
+
+      const text = this.formatter.formatBlockIPConfirm(device, ip, result.methods);
+      return this.waClient.reply(msg, text);
+    } else {
+      return this.waClient.reply(msg, `❌ Gagal memblokir ${ip}: ${result.error}`);
+    }
+  }
+
+  // ─────────────────────────────────────────
+  // /unblockip <IP> — Unblock IP
+  // ─────────────────────────────────────────
+  async _handleUnblockIP(msg, args) {
+    if (!this.firewall) {
+      return this.waClient.reply(msg, '❌ Firewall module tidak tersedia.');
+    }
+
+    if (args.length === 0) {
+      return this.waClient.reply(msg, [
+        '❌ *Format:* `/unblockip <IP>`',
+        '',
+        '📌 *Contoh:*',
+        '`/unblockip 192.168.1.150`',
+        '',
+        '💡 _Gunakan /blocked untuk melihat IP yang diblok_',
+      ].join('\n'));
+    }
+
+    const ip = args[0];
+    await this.waClient.reply(msg, `🔓 _Membuka blokir ${ip}..._`);
+
+    const device = this.db.getDeviceByIP(ip);
+    const mac = device ? device.mac : null;
+
+    const result = await this.firewall.unblockIP(ip, mac);
+
+    if (result.success) {
+      // Update database
+      if (device) {
+        this.db.setTrustLevel(device.mac, 'unknown');
+        this.db.setIPBlocked(device.mac, false);
+      }
+
+      const text = this.formatter.formatUnblockIPConfirm(device, ip);
+      return this.waClient.reply(msg, text);
+    } else {
+      return this.waClient.reply(msg, `❌ Gagal membuka blokir ${ip}`);
+    }
+  }
+
+  // ─────────────────────────────────────────
+  // /blocked — List all blocked IPs
+  // ─────────────────────────────────────────
+  async _handleBlockedList(msg) {
+    const firewallBlocked = this.firewall ? this.firewall.getBlockedList() : [];
+    const dbBlocked = this.db.getIPBlockedDevices();
+
+    const text = this.formatter.formatBlockedList(firewallBlocked, dbBlocked);
+    return this.waClient.reply(msg, text);
+  }
+
+  // ─────────────────────────────────────────
+  // /locate <MAC or IP> — Estimate device location
+  // ─────────────────────────────────────────
+  async _handleLocate(msg, args) {
+    if (!this.signalTracker) {
+      return this.waClient.reply(msg, '❌ Signal tracker tidak tersedia.');
+    }
+
+    if (args.length === 0) {
+      return this.waClient.reply(msg, [
+        '❌ *Format:* `/locate <MAC atau IP>`',
+        '',
+        '📌 *Contoh:*',
+        '`/locate AA:BB:CC:DD:EE:FF`',
+        '`/locate 192.168.1.150`',
+        '',
+        '💡 _Estimasi lokasi berdasarkan kekuatan sinyal/RTT_',
+      ].join('\n'));
+    }
+
+    const target = args[0];
+    await this.waClient.reply(msg, `📡 _Menganalisis sinyal ${target}..._`);
+
+    // Find device by MAC or IP
+    let device = null;
+    if (target.includes(':')) {
+      device = this.db.getDeviceByMAC(target.toUpperCase());
+    } else if (target.match(/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/)) {
+      device = this.db.getDeviceByIP(target);
+    }
+
+    if (!device) {
+      return this.waClient.reply(msg, `❌ Perangkat \`${target}\` tidak ditemukan di database.`);
+    }
+
+    if (!device.is_online) {
+      return this.waClient.reply(msg, `❌ Perangkat \`${target}\` sedang offline. Hanya bisa melacak perangkat yang online.`);
+    }
+
+    const signalInfo = await this.signalTracker.getDeviceSignal(device);
+    const text = this.formatter.formatDeviceLocation(device, signalInfo);
+    return this.waClient.reply(msg, text);
+  }
+
+  // ─────────────────────────────────────────
+  // /radar — Scan all devices + show location
+  // ─────────────────────────────────────────
+  async _handleRadar(msg) {
+    if (!this.signalTracker) {
+      return this.waClient.reply(msg, '❌ Signal tracker tidak tersedia.');
+    }
+
+    await this.waClient.reply(msg, '📡 _Scanning semua perangkat & menganalisis sinyal..._');
+
+    const onlineDevices = this.db.getOnlineDevices();
+
+    if (onlineDevices.length === 0) {
+      return this.waClient.reply(msg, '📡 *RADAR*\n\n_Tidak ada perangkat online_');
+    }
+
+    const signalData = await this.signalTracker.getAllDeviceSignals(onlineDevices);
+    const text = this.formatter.formatRadar(onlineDevices, signalData);
+    return this.waClient.reply(msg, text);
   }
 }
 

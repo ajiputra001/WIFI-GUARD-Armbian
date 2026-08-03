@@ -23,6 +23,7 @@ class DB {
     this.db.pragma('busy_timeout = 5000');
 
     this._createTables();
+    this._runMigrations();
     return this;
   }
 
@@ -77,6 +78,23 @@ class DB {
       CREATE INDEX IF NOT EXISTS idx_conn_logs_time ON connection_logs(timestamp);
       CREATE INDEX IF NOT EXISTS idx_conn_logs_mac ON connection_logs(mac);
     `);
+  }
+
+  // ─────────────────────────────────────────
+  // Run database migrations (safe, idempotent)
+  // ─────────────────────────────────────────
+  _runMigrations() {
+    // Migration: Add is_ip_blocked column
+    try {
+      const columns = this.db.pragma('table_info(devices)');
+      const hasIPBlocked = columns.some(col => col.name === 'is_ip_blocked');
+      if (!hasIPBlocked) {
+        this.db.exec('ALTER TABLE devices ADD COLUMN is_ip_blocked INTEGER DEFAULT 0');
+        console.log('📦 Migration: Added is_ip_blocked column');
+      }
+    } catch (error) {
+      console.log('⚠️  Migration warning:', error.message);
+    }
   }
 
   // ═══════════════════════════════════════════
@@ -136,6 +154,23 @@ class DB {
   getDeviceByMAC(mac) {
     const stmt = this.db.prepare('SELECT * FROM devices WHERE mac = ?');
     return stmt.get(mac);
+  }
+
+  // Get device by IP address
+  getDeviceByIP(ip) {
+    const stmt = this.db.prepare('SELECT * FROM devices WHERE ip = ? AND is_online = 1 ORDER BY last_seen DESC LIMIT 1');
+    return stmt.get(ip);
+  }
+
+  // Get all IP-blocked devices
+  getIPBlockedDevices() {
+    return this.db.prepare('SELECT * FROM devices WHERE is_ip_blocked = 1 ORDER BY last_seen DESC').all();
+  }
+
+  // Set IP blocked status
+  setIPBlocked(mac, blocked) {
+    const stmt = this.db.prepare('UPDATE devices SET is_ip_blocked = ? WHERE mac = ?');
+    return stmt.run(blocked ? 1 : 0, mac);
   }
 
   // Get all devices

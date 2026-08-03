@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// 🛡️ WiFi Guard Bot — Main Entry Point
+// 🛡️ WiFi Guard Bot v2.0 — Main Entry Point
 // WhatsApp Network Intrusion Detection System
 // ═══════════════════════════════════════════════════════════════
 
@@ -17,6 +17,8 @@ const MessageFormatter = require('./whatsapp/message-formatter');
 const CommandHandler = require('./whatsapp/command-handler');
 const AlertEngine = require('./alert/alert-engine');
 const DashboardServer = require('./dashboard/server');
+const IPFirewall = require('./security/ip-firewall');
+const SignalTracker = require('./scanner/signal-tracker');
 
 // ─────────────────────────────────────────
 // Configuration from .env
@@ -111,7 +113,7 @@ function printBanner() {
   console.log(border('  ╠' + '═'.repeat(width) + '╣'));
 
   // Info line
-  const info = chalk.gray('v1.0.0 | Node.js | Real-time Netlink + Human Voice Notification');
+  const info = chalk.gray('v2.0.0 | Node.js | ARP Spoof Firewall + Signal Tracker + Human Voice');
   const infoPadL = Math.floor((width - getDisplayWidth(info)) / 2);
   const infoPadR = width - getDisplayWidth(info) - infoPadL;
   console.log(border('  ║') + ' '.repeat(infoPadL) + info + ' '.repeat(infoPadR) + border('║'));
@@ -178,9 +180,34 @@ async function main() {
     alertPhoneNumber: config.alertPhoneNumber,
   });
 
-  // 6. Initialize Alert Engine
+  // 6. Initialize IP Firewall (ARP Spoof based — works even when STB is not router)
+  console.log(chalk.yellow('🔥 Initializing IP Firewall...'));
+  const firewall = new IPFirewall({
+    interface: systemInfo.interface,
+  });
+  try {
+    await firewall.initialize();
+    const tools = await firewall.checkTools();
+    console.log(chalk.green('✅ IP Firewall ready'));
+    console.log(chalk.gray(`   arpspoof: ${tools.arpspoof ? '✅' : '❌ (install: sudo apt install dsniff)'}`));
+    console.log(chalk.gray(`   nping: ${tools.nping ? '✅' : '❌ (install: sudo apt install nmap)'}`));
+    console.log(chalk.gray(`   iptables: ${tools.iptables ? '✅' : '❌'}`));
+    console.log(chalk.gray(`   arptables: ${tools.arptables ? '✅' : '❌'}`));
+  } catch (error) {
+    console.log(chalk.yellow(`⚠️  Firewall init warning: ${error.message}`));
+  }
+
+  // 7. Initialize Signal Tracker
+  console.log(chalk.yellow('📡 Initializing Signal Tracker...'));
+  const signalTracker = new SignalTracker({
+    interface: systemInfo.interface,
+  });
+  await signalTracker.initialize();
+  console.log(chalk.green('✅ Signal Tracker ready'));
+
+  // 8. Initialize Alert Engine
   const alertEngine = new AlertEngine({
-    db, scanner, identifier, formatter, waClient,
+    db, scanner, identifier, formatter, waClient, signalTracker,
     config: {
       scanInterval: config.scanInterval,
       deepScanInterval: config.deepScanInterval,
@@ -200,9 +227,9 @@ async function main() {
     },
   });
 
-  // 7. Initialize Command Handler
+  // 9. Initialize Command Handler
   const commandHandler = new CommandHandler({
-    db, scanner, identifier, formatter, alertEngine, waClient,
+    db, scanner, identifier, formatter, alertEngine, waClient, firewall, signalTracker,
   });
 
   // Set message handler
@@ -210,7 +237,7 @@ async function main() {
     await commandHandler.handleMessage(msg);
   });
 
-  // 8. Initialize Dashboard
+  // 10. Initialize Dashboard
   let dashboard = null;
   if (config.dashboardEnabled) {
     console.log(chalk.yellow('🌐 Initializing dashboard...'));
@@ -228,7 +255,7 @@ async function main() {
     console.log(chalk.green(`✅ Dashboard ready`));
   }
 
-  // 9. Start WhatsApp Client
+  // 11. Start WhatsApp Client
   try {
     await waClient.initialize();
     console.log(chalk.green('✅ WhatsApp client ready'));
@@ -243,7 +270,7 @@ async function main() {
     console.log(chalk.yellow('   Bot will continue without WhatsApp (dashboard & scanner still active)'));
   }
 
-  // 10. Start Alert Engine (begins scanning)
+  // 12. Start Alert Engine (begins scanning)
   console.log(chalk.yellow('⚡ Starting alert engine...'));
   alertEngine.start();
 
@@ -278,6 +305,11 @@ async function main() {
     console.log(chalk.yellow(`\n🛑 ${signal} received. Shutting down...`));
 
     alertEngine.stop();
+
+    // Cleanup firewall (stop all ARP spoof processes)
+    try {
+      await firewall.cleanup();
+    } catch {}
 
     if (config.alertPhoneNumber && waClient.isReady) {
       try {
