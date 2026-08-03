@@ -264,6 +264,24 @@ class WhatsAppClient {
       return true;
     } catch (error) {
       console.error('❌ Failed to send message:', error.message);
+      
+      // Auto-recover from detached frame / execution context destroyed (Puppeteer crash)
+      if (error.message.includes('detached Frame') || error.message.includes('Execution context was destroyed')) {
+        console.log('🔄 Puppeteer page context detached. Reloading page...');
+        try {
+          if (this.client.pupPage && !this.client.pupPage.isClosed()) {
+            await this.client.pupPage.reload({ waitUntil: 'networkidle0' });
+            await this._delay(3000);
+            await this.client.sendMessage(chatId, message);
+            return true;
+          }
+        } catch (reloadErr) {
+          console.log('⚠️ Page reload failed, initiating background reconnect...');
+          this.isReady = false;
+          this._handleReconnect();
+        }
+      }
+
       return this._sendWithRetry(chatId, message);
     }
   }
