@@ -32,20 +32,17 @@ class DashboardServer {
     // Socket.IO
     this._setupSocket();
 
-    // Start listening (with EADDRINUSE recovery)
+    // Start listening (with automatic port fallback on EADDRINUSE)
     this.server.on('error', (err) => {
       if (err.code === 'EADDRINUSE') {
-        console.log(`⚠️  Port ${this.port} busy, killing old process...`);
-        const { execSync } = require('child_process');
-        try {
-          execSync(`fuser -k ${this.port}/tcp 2>/dev/null`, { timeout: 5000 });
-        } catch {}
-        // Retry after 2 seconds
+        const oldPort = this.port;
+        this.port = this.port + 1;
+        console.log(`⚠️  Port ${oldPort} sibuk, mencoba port ${this.port}...`);
         setTimeout(() => {
           this.server.listen(this.port, () => {
             console.log(`🌐 Dashboard: http://localhost:${this.port}`);
           });
-        }, 2000);
+        }, 500);
       } else {
         console.log(`⚠️  Dashboard error: ${err.message} (bot tetap berjalan)`);
       }

@@ -76,10 +76,43 @@ class WhatsAppClient {
   }
 
   // ─────────────────────────────────────────
+  // Clean up stale chromium locks & orphaned processes
+  // ─────────────────────────────────────────
+  _cleanupStaleLocks() {
+    try {
+      const authDir = path.join(process.cwd(), '.wwebjs_auth');
+      if (fs.existsSync(authDir)) {
+        // Recursive search for SingletonLock files
+        const findAndRemoveLocks = (dir) => {
+          const files = fs.readdirSync(dir);
+          for (const file of files) {
+            const fullPath = path.join(dir, file);
+            try {
+              const stat = fs.statSync(fullPath);
+              if (stat.isDirectory()) {
+                findAndRemoveLocks(fullPath);
+              } else if (file.includes('SingletonLock') || file.includes('SingletonCookie') || file.includes('SingletonSocket')) {
+                fs.unlinkSync(fullPath);
+                console.log(`🧹 Removed stale lock file: ${file}`);
+              }
+            } catch {}
+          }
+        };
+        findAndRemoveLocks(authDir);
+      }
+    } catch (err) {
+      console.log('⚠️  Lock cleanup warning:', err.message);
+    }
+  }
+
+  // ─────────────────────────────────────────
   // Initialize WhatsApp client
   // ─────────────────────────────────────────
   async initialize() {
     return new Promise((resolve, reject) => {
+      // Clear stale locks from previous crashed sessions
+      this._cleanupStaleLocks();
+
       const chromePath = this._findChromePath();
 
       const puppeteerConfig = {
