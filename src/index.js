@@ -113,7 +113,7 @@ function printBanner() {
   console.log(border('  ╠' + '═'.repeat(width) + '╣'));
 
   // Info line
-  const info = chalk.gray('v2.0.0 | Node.js | ARP Spoof Firewall + Signal Tracker + Human Voice');
+  const info = chalk.gray('v2.0 | Firewall + Signal Tracker + Voice Alert');
   const infoPadL = Math.floor((width - getDisplayWidth(info)) / 2);
   const infoPadR = width - getDisplayWidth(info) - infoPadL;
   console.log(border('  ║') + ' '.repeat(infoPadL) + info + ' '.repeat(infoPadR) + border('║'));
