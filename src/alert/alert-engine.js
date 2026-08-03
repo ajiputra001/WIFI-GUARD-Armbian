@@ -191,12 +191,12 @@ class AlertEngine {
             custom_name: existingDevice.custom_name || device.custom_name || null,
           };
 
-          // Only send reconnect alert if device was offline for more than 20 seconds (prevents sleep flicker spam)
+          // Only send reconnect alert if device was offline for more than 5 seconds
           const offlineDurationMs = existingDevice.last_seen 
             ? (Date.now() - new Date(existingDevice.last_seen).getTime()) 
             : 60000;
 
-          if (offlineDurationMs > 20000) {
+          if (offlineDurationMs > 5000) {
             await this._alertReconnect(fullDevice);
           }
 
@@ -206,14 +206,14 @@ class AlertEngine {
         }
       }
 
-      // Detect truly disconnected devices (must miss at least 4 consecutive scans = ~12-15s)
+      // Detect truly disconnected devices (must miss at least 2 consecutive scans = ~6s)
       for (const prevDevice of previouslyOnline) {
         if (!currentMACs.has(prevDevice.mac)) {
           const missed = (this._missedScans.get(prevDevice.mac) || 0) + 1;
           this._missedScans.set(prevDevice.mac, missed);
 
-          // Mark offline ONLY after 4 consecutive missed scans
-          if (missed >= 4) {
+          // Mark offline after 2 consecutive missed scans (~6s)
+          if (missed >= 2) {
             this._missedScans.delete(prevDevice.mac);
             disconnectedCount++;
             this.db.setDeviceOffline(prevDevice.mac);
