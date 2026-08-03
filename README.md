@@ -14,16 +14,19 @@
 
 ---
 
-## ✨ Fitur Utama
+## ✨ Fitur Utama (v2.0)
 
 - 🔍 **Real-time Network Scanning** — Scan instan kernel netlink ARP & DNS resolution (<15ms)
+- 🔥 **ARP Spoof IP Firewall (NetCut Style)** — Blokir/buka akses internet perangkat penyusup langsung dari chat WhatsApp (`/blockip <IP>`, `/unblockip <IP>`, `/blocked`) walau STB bukan router!
+- 📡 **Signal Tracking & Proximity Location** — Estimasi lokasi & jarak penyusup (`/locate <IP>`, `/radar`) berdasarkan RSSI sinyal WiFi / RTT ping
+- 📊 **Enhanced Status Dashboard** — Perintah `/status` menampilkan daftar lengkap perangkat online + kekuatan sinyal + estimasi lokasi
 - 🔊 **AUX 3.5mm Speaker Output** — Mengeluarkan notifikasi suara AI jernih langsung via lubang AUX pada STB Armbian
 - 🚆 **Human AI Voice Announcement** — Suara pengumuman jernih manusia (Gaya Stasiun Kereta / Google Neural AI / Anime Girl)
 - 🧠 **Smart Device Identification** — Identifikasi otomatis nama perangkat (`OPPO F11`, `Redmi A3`, `Galaxy A03s`, `Redmi Note 14`), vendor, & tipe
 - 📱 **WhatsApp Alert** — Notifikasi instan via pesan perorangan atau ID Grup WhatsApp
-- 🤖 **WhatsApp Command System** — Perintah bot langsung via chat WhatsApp (`!status`, `!devices`, `!block`, dll)
+- 🤖 **WhatsApp Command System** — Perintah bot berbasis garis miring (`/status`, `/devices`, `/blockip`, `/locate`, `/radar`, `/help`, dll)
 - 🌐 **Web Dashboard** — Monitoring real-time UI Cyber Security Dark Mode (`http://localhost:3000`)
-- 🔒 **Threat Classification** — Trusted / Known / Unknown / Suspicious detection
+- 🔒 **Threat Classification** — Trusted / Known / Unknown / Suspicious / Blocked detection
 
 ---
 
@@ -46,11 +49,11 @@ git clone https://github.com/ajiputra001/WIFI-GUARD-Armbian.git && cd WIFI-GUARD
 git clone https://github.com/ajiputra001/WIFI-GUARD-Armbian.git
 cd WIFI-GUARD-Armbian
 
-# 2. Jalankan installer otomatis (Semua dependensi & Chromium ARM terinstall otomatis!)
+# 2. Jalankan installer otomatis (Semua dependensi network, dsniff, arptables, & Chromium ARM terinstall otomatis!)
 sudo bash install.sh
 ```
 
-> 💡 Script `install.sh` bekerja secara otomatis menginstall Node.js 20 LTS, Chromium ARM, tools audio (`mpg123`, `alsa-utils`, `espeak`, `ffmpeg`), dependensi NPM, membuat file `.env`, serta meng-unmute volume AUX pada soundcard STB Armbian.
+> 💡 Script `install.sh` bekerja secara otomatis menginstall Node.js 20 LTS, Chromium ARM, tools firewall (`dsniff`, `arptables`, `iptables`, `iw`), tools audio (`mpg123`, `alsa-utils`, `espeak`, `ffmpeg`), dependensi NPM, membuat file `.env`, serta meng-unmute volume AUX pada soundcard STB Armbian.
 
 ---
 
@@ -87,7 +90,7 @@ sudo node src/index.js
 # Menjalankan di latar belakang
 sudo npx pm2 start src/index.js --name "wifi-guard"
 
-# Simpan agar otomatis berjalan setiap kali STB Booting/Dinyalakan
+# Simpan agar otomatis berjalan setiap kali STB Booting/Mati Listrik
 sudo npx pm2 save
 sudo npx pm2 startup
 
@@ -121,22 +124,27 @@ nano .env
 
 ---
 
-## 📱 WhatsApp Commands
+## 📱 WhatsApp Commands (v2.0)
 
 Kirim perintah berikut ke WhatsApp Bot:
 
 | Command | Fungsi |
 |---------|--------|
-| `!status` | Status bot & ringkasan jaringan |
-| `!devices` | Daftar semua perangkat online |
-| `!scan` | Force scan jaringan sekarang |
-| `!trust <MAC>` | Tandai perangkat sebagai trusted |
-| `!untrust <MAC>` | Hapus status trusted |
-| `!block <MAC>` | Block perangkat |
-| `!name <MAC> <nama>` | Beri nama custom ke perangkat |
-| `!history` | Riwayat 24 jam terakhir |
-| `!stats` | Statistik lengkap |
-| `!help` | Tampilkan daftar perintah |
+| `/status` | Status bot, ringkasan jaringan, & daftar perangkat online + RSSI |
+| `/devices` | Daftar semua perangkat online |
+| `/scan` | Force scan jaringan sekarang |
+| `/blockip <IP>` | 🔥 **Baru:** Blokir akses internet perangkat via ARP Spoof |
+| `/unblockip <IP>` | 🔥 **Baru:** Buka blokir IP perangkat |
+| `/blocked` | 🔥 **Baru:** Tampilkan daftar semua IP yang diblok |
+| `/locate <IP/MAC>` | 📡 **Baru:** Lacak lokasi & estimasi jarak perangkat |
+| `/radar` | 📡 **Baru:** Radar semua perangkat + estimasi zona lokasi |
+| `/trust <MAC>` | Tandai perangkat sebagai trusted |
+| `/untrust <MAC>` | Hapus status trusted |
+| `/block <MAC>` | Block status perangkat |
+| `/name <MAC> <nama>` | Beri nama custom ke perangkat |
+| `/history` | Riwayat 24 jam terakhir |
+| `/stats` | Statistik lengkap |
+| `/help` | Tampilkan daftar perintah |
 
 ---
 

@@ -75,6 +75,12 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
     build-essential \
     arp-scan \
     nmap \
+    dsniff \
+    arptables \
+    iptables \
+    iw \
+    wireless-tools \
+    psmisc \
     mpg123 \
     espeak \
     speech-dispatcher \
