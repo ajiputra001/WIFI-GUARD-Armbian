@@ -327,8 +327,26 @@ async function main() {
   process.on('SIGINT', () => shutdown('SIGINT'));
   process.on('SIGTERM', () => shutdown('SIGTERM'));
 
+  // Ignore SIGHUP signal sent when terminal/PuTTY/SSH session is closed
+  process.on('SIGHUP', () => {
+    console.log('⚠️ SIGHUP received (terminal/SSH closed). Continuing background operation...');
+  });
+
+  // Ignore EPIPE errors on stdout and stderr when terminal pipe closes
+  if (process.stdout && process.stdout.on) {
+    process.stdout.on('error', (err) => {
+      if (err.code === 'EPIPE') return;
+    });
+  }
+  if (process.stderr && process.stderr.on) {
+    process.stderr.on('error', (err) => {
+      if (err.code === 'EPIPE') return;
+    });
+  }
+
   // Keep process alive
   process.on('uncaughtException', (error) => {
+    if (error && error.code === 'EPIPE') return;
     console.error(chalk.red('💥 Uncaught Exception:'), error);
   });
 
