@@ -45,6 +45,10 @@ const config = {
   voiceAlertOnNewDevice: process.env.VOICE_ALERT_ON_NEW_DEVICE !== 'false',
   voiceAlertOnReconnect: process.env.VOICE_ALERT_ON_RECONNECT === 'true',
   voiceAlertOnDisconnect: process.env.VOICE_ALERT_ON_DISCONNECT === 'true',
+  missedScansThreshold: parseInt(process.env.OFFLINE_MISSED_SCANS_THRESHOLD) || 15,
+  reconnectMinOfflineSec: parseInt(process.env.RECONNECT_MIN_OFFLINE_SEC) || 30,
+  flapCooldownMinutes: parseInt(process.env.FLAP_COOLDOWN_MINUTES) || 10,
+  netlinkDebounceMs: parseInt(process.env.NETLINK_DEBOUNCE_MS) || 3000,
 };
 
 // Helper to strip ANSI codes and calculate true terminal column display width (handles Emojis & ANSI)
@@ -224,6 +228,10 @@ async function main() {
       voiceAlertOnNewDevice: config.voiceAlertOnNewDevice,
       voiceAlertOnReconnect: config.voiceAlertOnReconnect,
       voiceAlertOnDisconnect: config.voiceAlertOnDisconnect,
+      missedScansThreshold: config.missedScansThreshold,
+      reconnectMinOfflineSec: config.reconnectMinOfflineSec,
+      flapCooldownMinutes: config.flapCooldownMinutes,
+      netlinkDebounceMs: config.netlinkDebounceMs,
     },
   });
 

@@ -36,6 +36,12 @@ class AlertEngine {
     this.voiceAlertOnReconnect = config.voiceAlertOnReconnect === true;
     this.voiceAlertOnDisconnect = config.voiceAlertOnDisconnect === true;
 
+    // Threshold & Anti-Flapping Config
+    this.missedScansThreshold = config.missedScansThreshold || 15; // Require ~45-60s of missed scans
+    this.reconnectMinOfflineMs = (config.reconnectMinOfflineSec || 30) * 1000; // Require 30s offline before reconnect alert
+    this.flapCooldownMs = (config.flapCooldownMinutes || 10) * 60 * 1000; // 10 minutes flap cooldown
+    this.netlinkDebounceMs = config.netlinkDebounceMs || 3000;
+
     // State
     this._scanTimer = null;
     this._deepScanTimer = null;
@@ -46,6 +52,8 @@ class AlertEngine {
     this._ipMonitorProcess = null;
     this._debounceTimer = null;
     this._missedScans = new Map(); // Track consecutive missed scans per MAC to prevent Wi-Fi sleep flicker spam
+    this._flapHistory = new Map(); // Track recent state change timestamps per MAC
+    this._flapCooldowns = new Map(); // Track active flap cooldown expiration per MAC
   }
 
   // ─────────────────────────────────────────
@@ -53,6 +61,55 @@ class AlertEngine {
   // ─────────────────────────────────────────
   onDeviceUpdate(callback) {
     this._onDeviceUpdate = callback;
+  }
+
+  // ─────────────────────────────────────────
+  // Helper: Active Ping Check before declaring device offline
+  // ─────────────────────────────────────────
+  async _verifyDeviceOffline(ip) {
+    if (!ip) return false;
+    try {
+      return new Promise((resolve) => {
+        exec(`ping -c 2 -W 1 ${ip} 2>/dev/null`, (error, stdout) => {
+          if (!error && (stdout.includes('bytes from') || stdout.includes('ttl='))) {
+            resolve(true); // Host is active!
+          } else {
+            resolve(false); // Host is down
+          }
+        });
+      });
+    } catch {
+      return false;
+    }
+  }
+
+  // ─────────────────────────────────────────
+  // Helper: Anti-Flapping protection per MAC
+  // ─────────────────────────────────────────
+  _checkFlapping(mac, deviceName) {
+    const now = Date.now();
+    const cooldownUntil = this._flapCooldowns.get(mac) || 0;
+
+    if (now < cooldownUntil) {
+      const remainingSec = Math.ceil((cooldownUntil - now) / 1000);
+      console.log(`🛡️ [ANTI-FLAP] Suppressed alert for ${mac} (${deviceName}) — Cooldown active (${remainingSec}s remaining)`);
+      return true; // Suppress alert!
+    }
+
+    // Keep history of last 5 minutes (300,000ms)
+    const history = (this._flapHistory.get(mac) || []).filter(ts => now - ts < 300000);
+    history.push(now);
+    this._flapHistory.set(mac, history);
+
+    // If state changed > 3 times in 5 minutes, enter flap cooldown
+    if (history.length > 3) {
+      const cooldownMs = this.flapCooldownMs;
+      this._flapCooldowns.set(mac, now + cooldownMs);
+      console.log(`🚨 [ANTI-FLAP ACTIVATED] Perangkat ${deviceName} (${mac}) mengalami jaringan flapping! Notifikasi WhatsApp dijeda selama ${cooldownMs / 60000} menit.`);
+      return true; // Suppress alert!
+    }
+
+    return false;
   }
 
   // ─────────────────────────────────────────
@@ -67,7 +124,7 @@ class AlertEngine {
         if (this._debounceTimer) clearTimeout(this._debounceTimer);
         this._debounceTimer = setTimeout(() => {
           this.performScan();
-        }, 500);
+        }, this.netlinkDebounceMs);
       });
 
       this._ipMonitorProcess.on('error', (err) => {
@@ -191,12 +248,12 @@ class AlertEngine {
             custom_name: existingDevice.custom_name || device.custom_name || null,
           };
 
-          // Only send reconnect alert if device was offline for more than 5 seconds
+          // Only send reconnect alert if device was offline for more than reconnectMinOfflineMs
           const offlineDurationMs = existingDevice.last_seen 
             ? (Date.now() - new Date(existingDevice.last_seen).getTime()) 
             : 60000;
 
-          if (offlineDurationMs > 5000) {
+          if (offlineDurationMs >= this.reconnectMinOfflineMs) {
             await this._alertReconnect(fullDevice);
           }
 
@@ -206,14 +263,23 @@ class AlertEngine {
         }
       }
 
-      // Detect truly disconnected devices (must miss at least 2 consecutive scans = ~6s)
+      // Detect truly disconnected devices (must miss at least missedScansThreshold consecutive scans)
       for (const prevDevice of previouslyOnline) {
         if (!currentMACs.has(prevDevice.mac)) {
           const missed = (this._missedScans.get(prevDevice.mac) || 0) + 1;
           this._missedScans.set(prevDevice.mac, missed);
 
-          // Mark offline after 2 consecutive missed scans (~6s)
-          if (missed >= 2) {
+          // Mark offline after consecutive missed scans threshold (default 15)
+          if (missed >= this.missedScansThreshold) {
+            // Verify with active ping check before marking offline
+            const isAlive = await this._verifyDeviceOffline(prevDevice.ip);
+            if (isAlive) {
+              // Device responded to unicast ping (e.g. Wi-Fi power saving mode), reset missed counter
+              this._missedScans.set(prevDevice.mac, 0);
+              continue;
+            }
+
+            // Confirmed truly offline
             this._missedScans.delete(prevDevice.mac);
             disconnectedCount++;
             this.db.setDeviceOffline(prevDevice.mac);
@@ -502,13 +568,17 @@ class AlertEngine {
   async _alertReconnect(device) {
     if (!this.alertsEnabled) return;
     
+    const devName = this._getReadableDeviceName(device);
+    if (this._checkFlapping(device.mac, devName)) {
+      return; // Anti-flap suppressed alert!
+    }
+
     const totalOnline = this.db.getOnlineDevices().length;
     const text = this.formatter.formatReconnectAlert(device, totalOnline);
     
     console.log(`🔄 RECONNECT ALERT: ${device.mac} (${device.vendor || 'Unknown'})`);
     
     if (this.voiceAlertOnReconnect) {
-      const devName = this._getReadableDeviceName(device);
       let voiceMsg = `Informasi. Perangkat ${devName} baru saja terhubung kembali ke jaringan Wi-Fi.`;
 
       if (this.voiceAlertStyle === 'anime') {
@@ -529,11 +599,15 @@ class AlertEngine {
   async _alertDisconnect(device) {
     if (!this.alertsEnabled) return;
     
+    const devName = this._getReadableDeviceName(device);
+    if (this._checkFlapping(device.mac, devName)) {
+      return; // Anti-flap suppressed alert!
+    }
+
     const totalOnline = this.db.getOnlineDevices().length;
     const text = this.formatter.formatDisconnectAlert(device, totalOnline);
     
     if (this.voiceAlertOnDisconnect) {
-      const devName = this._getReadableDeviceName(device);
       let voiceMsg = `Informasi. Perangkat ${devName} telah terputus dari jaringan Wi-Fi.`;
 
       if (this.voiceAlertStyle === 'anime') {
